@@ -7,21 +7,7 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error("Variables d'environnement Supabase manquantes");
 }
 
-if (!supabaseUrl.startsWith("https://")) {
-  throw new Error("URL Supabase invalide - doit commencer par https://");
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false,
-  },
-  global: {
-    headers: {
-      "X-Client-Info": "backend-api",
-    },
-  },
-});
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 module.exports = supabase;
+

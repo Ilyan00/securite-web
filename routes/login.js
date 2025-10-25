@@ -3,14 +3,22 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const supabase = require("../config/supabase");
 const { loginRateLimit } = require("../middleware/rateLimiter");
-const { validateLogin } = require("../middleware/validation");
 
 const router = express.Router();
 
-router.post("/", loginRateLimit, validateLogin, async (req, res) => {
+// POST /login - Connexion d'un utilisateur et génération d'un token JWT
+router.post("/", loginRateLimit, async (req, res) => {
   try {
     const { email, mot_de_passe } = req.body;
 
+    // Validation des données
+    if (!email || !mot_de_passe) {
+      return res.status(400).json({
+        error: "Email et mot de passe sont requis",
+      });
+    }
+
+    // Récupérer l'utilisateur par email avec son rôle
     const { data: user, error: fetchError } = await supabase
       .from("users")
       .select(
@@ -38,6 +46,7 @@ router.post("/", loginRateLimit, validateLogin, async (req, res) => {
       });
     }
 
+    // Vérifier le mot de passe
     const isPasswordValid = await bcrypt.compare(
       mot_de_passe,
       user.mot_de_passe
@@ -49,6 +58,7 @@ router.post("/", loginRateLimit, validateLogin, async (req, res) => {
       });
     }
 
+    // Vérifier si l'utilisateur a la permission de se connecter
     if (!user.roles || !user.roles.can_post_login) {
       return res.status(403).json({
         error:
@@ -57,26 +67,22 @@ router.post("/", loginRateLimit, validateLogin, async (req, res) => {
       });
     }
 
-    if (!process.env.JWT_SECRET) {
-      throw new Error("JWT_SECRET non configuré");
-    }
-
+    // Générer le token JWT (valable 1 heure)
     const token = jwt.sign(
       {
         userId: user.id,
         email: user.email,
         nom: user.nom,
-        role: user.roles.nom,
       },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || "votre_secret_jwt_par_defaut", // Utilisez une variable d'environnement en production
       { expiresIn: "1h" }
     );
 
+    // Retourner le token et les informations utilisateur (sans le mot de passe)
     const userResponse = {
       id: user.id,
       nom: user.nom,
       email: user.email,
-      role: user.roles.nom,
     };
 
     res.status(200).json({

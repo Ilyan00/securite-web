@@ -29,7 +29,10 @@ router.get(
         .order("sales_count", { ascending: false });
 
       if (error) {
-        console.error("Erreur lors de la récupération des meilleures ventes:", error);
+        console.error(
+          "Erreur lors de la récupération des meilleures ventes:",
+          error
+        );
         return res.status(500).json({
           error: "Erreur lors de la récupération des meilleures ventes",
         });
@@ -97,7 +100,10 @@ router.get(
         },
       });
     } catch (error) {
-      console.error("Erreur lors de la récupération des meilleures ventes:", error);
+      console.error(
+        "Erreur lors de la récupération des meilleures ventes:",
+        error
+      );
       res.status(500).json({
         error: "Erreur interne du serveur",
       });

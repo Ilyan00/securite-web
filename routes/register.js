@@ -1,15 +1,22 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const supabase = require("../config/supabase");
-const { registerRateLimit } = require("../middleware/rateLimiter");
-const { validateRegister } = require("../middleware/validation");
 
 const router = express.Router();
 
-router.post("/", registerRateLimit, validateRegister, async (req, res) => {
+// POST /register - Inscription d'un nouvel utilisateur
+router.post("/", async (req, res) => {
   try {
     const { nom, email, mot_de_passe } = req.body;
 
+    // Validation des données
+    if (!nom || !email || !mot_de_passe) {
+      return res.status(400).json({
+        error: "Tous les champs sont requis (nom, email, mot_de_passe)",
+      });
+    }
+
+    // Vérifier si l'utilisateur existe déjà
     const { data: existingUser, error: checkError } = await supabase
       .from("users")
       .select("id")
@@ -22,9 +29,11 @@ router.post("/", registerRateLimit, validateRegister, async (req, res) => {
       });
     }
 
-    const saltRounds = 12;
+    // Hasher le mot de passe
+    const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(mot_de_passe, saltRounds);
 
+    // Insérer le nouvel utilisateur
     const { data, error } = await supabase
       .from("users")
       .insert([
@@ -44,6 +53,7 @@ router.post("/", registerRateLimit, validateRegister, async (req, res) => {
       });
     }
 
+    // Retourner les données de l'utilisateur (sans le mot de passe)
     const user = data[0];
     delete user.mot_de_passe;
 

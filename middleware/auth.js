@@ -49,11 +49,10 @@ const authenticateToken = async (req, res, next) => {
     }
 
     // Vérifier et décoder le token JWT
-    if (!process.env.JWT_SECRET) {
-      throw new Error("JWT_SECRET non configuré");
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "votre_secret_jwt_par_defaut"
+    );
 
     // Récupérer les informations utilisateur avec son rôle depuis la base de données
     const user = await getUserWithRole(decoded.userId);
@@ -154,11 +153,10 @@ const authenticateHybrid = async (req, res, next) => {
 
     if (token) {
       // Authentification JWT
-      if (!process.env.JWT_SECRET) {
-        throw new Error("JWT_SECRET non configuré");
-      }
-
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || "votre_secret_jwt_par_defaut"
+      );
       const user = await getUserWithRole(decoded.userId);
 
       if (user) {
