@@ -12,6 +12,7 @@ const getUserWithRole = async (userId) => {
       nom, 
       email, 
       created_at,
+      password_changed_at,
       role_id,
       roles (
         id,
@@ -63,6 +64,19 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
+    // Vérifier si le token a été émis avant le dernier changement de mot de passe
+    if (user.password_changed_at) {
+      const tokenIssuedAt = new Date(decoded.iat * 1000); // iat est en secondes
+      const passwordChangedAt = new Date(user.password_changed_at);
+
+      if (tokenIssuedAt < passwordChangedAt) {
+        return res.status(401).json({
+          error:
+            "Token invalide. Le mot de passe a été modifié après l'émission de ce token.",
+        });
+      }
+    }
+
     // Ajouter les informations utilisateur à la requête
     req.user = user;
     next();
@@ -104,12 +118,27 @@ const authenticateApiKey = async (req, res, next) => {
       .from("api_keys")
       .select("id, user_id, name, last_used, is_active")
       .eq("key_hash", keyHash)
-      .eq("is_active", true)
       .single();
 
     if (apiKeyError || !apiKeyData) {
+      console.log(
+        `Tentative d'authentification avec une clé API invalide: ${apiKey.substring(
+          0,
+          10
+        )}...`
+      );
       return res.status(401).json({
-        error: "Clé API invalide ou désactivée",
+        error: "Clé API invalide",
+      });
+    }
+
+    // Vérifier explicitement que la clé est active
+    if (!apiKeyData.is_active) {
+      console.log(
+        `Tentative d'authentification avec une clé API désactivée (ID: ${apiKeyData.id})`
+      );
+      return res.status(401).json({
+        error: "Clé API désactivée",
       });
     }
 
@@ -160,9 +189,23 @@ const authenticateHybrid = async (req, res, next) => {
       const user = await getUserWithRole(decoded.userId);
 
       if (user) {
-        req.user = user;
-        req.authMethod = "jwt";
-        return next();
+        // Vérifier si le token a été émis avant le dernier changement de mot de passe
+        if (user.password_changed_at) {
+          const tokenIssuedAt = new Date(decoded.iat * 1000); // iat est en secondes
+          const passwordChangedAt = new Date(user.password_changed_at);
+
+          if (tokenIssuedAt < passwordChangedAt) {
+            // Token invalide, continuer vers la vérification de la clé API
+          } else {
+            req.user = user;
+            req.authMethod = "jwt";
+            return next();
+          }
+        } else {
+          req.user = user;
+          req.authMethod = "jwt";
+          return next();
+        }
       }
     }
 
@@ -175,10 +218,9 @@ const authenticateHybrid = async (req, res, next) => {
         .from("api_keys")
         .select("id, user_id, name, last_used, is_active")
         .eq("key_hash", keyHash)
-        .eq("is_active", true)
         .single();
 
-      if (!apiKeyError && apiKeyData) {
+      if (!apiKeyError && apiKeyData && apiKeyData.is_active) {
         const user = await getUserWithRole(apiKeyData.user_id);
 
         if (user) {

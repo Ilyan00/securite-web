@@ -290,6 +290,24 @@ router.delete("/:id", authenticateToken, async (req, res) => {
       });
     }
 
+    // Vérifier que la suppression a bien fonctionné
+    const { data: verifyKey, error: verifyError } = await supabase
+      .from("api_keys")
+      .select("is_active")
+      .eq("id", id)
+      .single();
+
+    if (verifyError || !verifyKey || verifyKey.is_active) {
+      console.error("Échec de la désactivation de la clé API:", verifyError);
+      return res.status(500).json({
+        error: "Échec de la désactivation de la clé API",
+      });
+    }
+
+    console.log(
+      `Clé API désactivée avec succès (ID: ${id}, Nom: ${existingKey.name})`
+    );
+
     res.json({
       message: "Clé API supprimée avec succès",
       deletedKey: {

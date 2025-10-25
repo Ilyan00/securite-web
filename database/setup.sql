@@ -114,4 +114,11 @@ CREATE INDEX IF NOT EXISTS idx_api_keys_is_active ON api_keys(is_active);
 ALTER TABLE products 
 ADD COLUMN IF NOT EXISTS image_url TEXT;
 
--- 16. Pas de triggers updated_at - fonctionnalité supprimée
+-- 16. Ajouter la colonne password_changed_at pour l'invalidation des tokens
+ALTER TABLE users 
+ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+-- 17. Créer un index pour améliorer les performances sur password_changed_at
+CREATE INDEX IF NOT EXISTS idx_users_password_changed_at ON users(password_changed_at);
+
+-- 18. Pas de triggers updated_at - fonctionnalité supprimée

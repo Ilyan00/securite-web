@@ -42,6 +42,7 @@ router.put("/", authenticateToken, async (req, res) => {
       .from("users")
       .update({
         mot_de_passe: hashedNewPassword,
+        password_changed_at: new Date().toISOString(),
       })
       .eq("id", req.user.id);
 
